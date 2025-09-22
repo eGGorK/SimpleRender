@@ -1,6 +1,7 @@
 #include <iostream>
 #include <string.h>
 #include "tgaimage.h"
+#include <algorithm>
 
 TGAColor::TGAColor(): val(0), bytespp(1){
 }
@@ -18,10 +19,42 @@ TGAColor::TGAColor(const TGAColor& other): val(other.val), bytespp(other.bytespp
 
 TGAColor& TGAColor::operator=(const TGAColor& other) {
     if (this != &other) {
+        r = other.r;
+        g = other.g;
+        b = other.b;
+        a = other.a;
         val = other.val;
         bytespp = other.bytespp;
     }
     return *this;
+}
+
+TGAColor TGAColor::operator+ (const TGAColor& other) {
+        TGAColor result;
+        result.r = std::min(255, r + other.r);
+        result.g = std::min(255, g + other.g);
+        result.b = std::min(255, b + other.b);
+        result.a = std::min(255, a + other.a);
+        return result;
+    }
+
+TGAColor TGAColor::operator- (const TGAColor& other) {
+    TGAColor result;
+    result.r = r - other.r;
+    result.g = g - other.g;
+    result.b = b - other.b;
+    return result;
+}
+
+TGAColor TGAColor::operator* (const float scalar) {
+    TGAColor result;
+    result.bytespp = bytespp;
+    result.r = static_cast<unsigned char>(std::clamp(static_cast<int>(r * scalar), 0, 255));
+    result.g = static_cast<unsigned char>(std::clamp(static_cast<int>(g * scalar), 0, 255));
+    result.b = static_cast<unsigned char>(std::clamp(static_cast<int>(b * scalar), 0, 255));
+    result.a = static_cast<unsigned char>(std::clamp(static_cast<int>(a * scalar), 0, 255));
+
+    return result;
 }
 
 //End TGAColorRealization
@@ -51,15 +84,16 @@ TGAImage::~TGAImage() {
 }
 TGAColor TGAImage::get(int x, int y) {
     if (x < 0 || y  < 0 || !data || x> width || y >height){
-        std::cerr<<""<<std::endl;
+        std::cerr<<"get error"<<std::endl;
         return TGAColor();
     }
-    return TGAColor(data + x*(y*width)*bytespp,bytespp);
+    return TGAColor(data + (x+y*width)*bytespp,bytespp);
 }
 
 bool TGAImage::set(int x, int y, TGAColor color) {
-    if (x < 0 || y  < 0 || !data || x> width || y >height){
-        std::cerr<<""<<std::endl;
+    if (x < 0 || y  < 0 || x > width || y > height){
+        std::cout << "x:" << x << " y: " << y << std::endl;
+        std::cerr<<"set error"<<std::endl;
         return false;
     }
     memcpy(data + (x+y*width)*bytespp, color.raw, bytespp);
@@ -119,14 +153,14 @@ bool TGAImage::read_TGA_file(const char* filename) {
     return true;
 }
 bool TGAImage::load_RLE_data(std::ifstream& in) {
-    unsigned long pixels = width*height*bytespp;
+    unsigned long pixels = width*height;
     unsigned long currentpixel = 0;
     unsigned long currentbyte = 0;
     TGAColor currentcolor;
     do {
         unsigned char chunk = in.get();
         if (!in.good()) {
-            std::cerr << " " << std::endl;
+            std::cerr << "load_RLE_data error" << std::endl;
             in.close();
             return false;
         }
@@ -135,7 +169,7 @@ bool TGAImage::load_RLE_data(std::ifstream& in) {
             for (int i =0; i < chunk; i++){
                 in.read((char*)currentcolor.raw, bytespp);
                 if (!in.good()) {
-                    std::cerr << " " << std::endl;
+                    std::cerr << "load_RLE_data error" << std::endl;
                     in.close();
                     return false;
                 }
@@ -163,16 +197,28 @@ bool TGAImage::load_RLE_data(std::ifstream& in) {
 
 bool TGAImage::flip_vertically() {
     if (!data) return false;
-    unsigned long byteline = width*bytespp;
-    unsigned char *line = new unsigned char[byteline];
-    for (int i = 0; i < height>>1; i++) {
-        unsigned long p1_pos = i*byteline;
-        unsigned long p2_pos = (height - 1 - i) * byteline;
-        memmove((void *)line,      (void *)(data+p1_pos), byteline);
-		memmove((void *)(data+p1_pos), (void *)(data+p2_pos), byteline);
-		memmove((void *)(data+p2_pos), (void *)line,      byteline);
+
+    unsigned long bytes_per_line = width * bytespp;
+    unsigned char* line = new unsigned char[bytes_per_line];
+    int half = height >> 1;
+
+    for (int j = 0; j < half; ++j) {
+        unsigned long l1 = j * bytes_per_line;
+        unsigned long l2 = (height - 1 - j) * bytes_per_line;
+
+        // Проверяем индексы перед memmove
+        if (l1 >= height * bytes_per_line || l2 >= height * bytes_per_line) {
+            delete[] line;
+            return false; // Или выведите сообщение об ошибке
+        }
+
+        memcpy(line, data + l1, bytes_per_line);  // Используем memcpy вместо memmove
+        memcpy(data + l1, data + l2, bytes_per_line);
+        memcpy(data + l2, line, bytes_per_line);
+
     }
-    delete [] line;
+
+    delete[] line;
     return true;
 }
 

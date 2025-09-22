@@ -41,8 +41,10 @@ struct TGAColor {
     TGAColor(const unsigned char* praw, int bpp);
 
     TGAColor(const TGAColor& other);
-
     TGAColor& operator =(const TGAColor& other);
+    TGAColor operator+ (const TGAColor& other);
+    TGAColor operator- (const TGAColor& other);
+    TGAColor operator* (float scalar);
 };
 
 class TGAImage {
@@ -69,6 +71,8 @@ public:
     bool flip_vertically();
     bool flip_horizontally();
     void clear();
+    int _width() { return width; }
+    int _height() { return height; }
 };
 
 #endif
