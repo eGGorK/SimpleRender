@@ -63,8 +63,8 @@ struct GuroShader: public IShader {
         float diffuse =std::max(0.f, n * l);
         float specular = std::max(0.f, r*vv);
         float intensivity = intsvty * bar;
-        //color = model.textur_map.get(u,v)*diffuse;
-        color = color*(specular+diffuse + intensivity);
+        color = model.textur_map.get(u,v)*(specular+diffuse + intensivity);
+        //color = color*();
         return false;
     }
 };
