@@ -1,9 +1,12 @@
+#ifndef MODEL_H
+#define MODEL_H
+
 #include <iostream>
 #include <vector>
 #include "../geometry.h"
 #include "../TGAreader/tgaimage.h"
-class Model;
 
+class Model;
 
 class Face { 
 public:
@@ -22,7 +25,7 @@ public:
     std::vector<Vec3f> texturs;
     std::vector<Face> faces;
     TGAImage textur_map;
-    float box_size[2][2];
+    Vec3f box_size[2];
 public:
     Model(const char* filename) {
         if (filename != ""){
@@ -32,5 +35,9 @@ public:
     bool parsing(const char* filename);
     bool scaling(int widht, int height);
     bool load_textur_map(const char* mapname);
+    bool resize(TGAImage& image);
     friend Face;
+
 };
+
+#endif

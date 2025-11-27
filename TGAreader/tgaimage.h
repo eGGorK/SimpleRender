@@ -53,13 +53,14 @@ protected:
     int width;
     int height;
     int bytespp;
-
     bool load_RLE_data(std::ifstream& in);
     bool unload_RLE_data(std::ofstream& out);
 public:
+    float* zbuffer;
     enum Format { GRAYSCALE = 1, RGB = 3, RGBA = 4};
     TGAImage();
     TGAImage(int w, int h, int bpp);
+    TGAImage(int w, int h, int bpp, const TGAColor& color);
     TGAImage(const TGAImage& other);
     TGAImage& operator =(const TGAImage &other);
     ~TGAImage();
@@ -73,6 +74,7 @@ public:
     void clear();
     int _width() { return width; }
     int _height() { return height; }
+    bool scale(int new_width, int new_height);
 };
 
 #endif
