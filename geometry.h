@@ -4,103 +4,154 @@
 
 #include <iostream>
 #include <cmath>
+#include <vector>
+#include <cassert>
 
-template<typename T>
-class Vec3{
-public:
+//VEC
+
+template <size_t DIM, typename T> 
+struct vec {
+    T data[DIM];
+    vec() { for (size_t i = DIM; i--; data[i] = T()); }
+    T& operator[](const size_t i) {assert(i < DIM); return data[i]; }
+    const T& operator[](const size_t i ) const {assert(i < DIM); return data[i];}
+};
+
+template <typename T> 
+struct vec<2,T> {
+    T x, y;
+    vec(): x(T()), y(T()) {}
+    vec(T x, T y): x(x), y(y) {}
+    T& operator[](const size_t i) {assert(i < 2); return i<=0 ? x : y; }
+    const T& operator[](const size_t i) const {assert(i < 2); return i<=0 ? x : y; }
+};
+
+template <typename T> 
+struct vec<3,T> {
     T x, y, z;
-public:
-    Vec3<T>() = default;
-    Vec3<T>(T x, T y, T z):x(x), y(y), z(z){}
-    Vec3<T>(Vec3<T>&& other) : x(std::move(other.x)), y(std::move(other.y)), z(std::move(other.z)) {}
-    Vec3<T>(const Vec3<T>& other): x(other.x), y(other.y), z(other.z) {}
-    Vec3<T> & operator =(const Vec3<T>& other) {
-        if (this != &other) {
-            x = other.x;
-            y = other.y;
-            z = other.z;
-        }
-        return *this;
+    vec(): x(T()), y(T()) {}
+    vec(T x, T y, T z): x(x), y(y), z(z) {}
+    T& operator[](const size_t i) { assert(i < 3); return i<=0 ? x : (i == 1 ? y : z); }
+    const T& operator[](const size_t i) const { assert(i < 3); return i<=0 ? x : (i == 1 ? y : z); }
+    float norm() { return std::sqrt(x*x+y*y+z*z); }
+    vec<3,T> & normalize(T l=1) { *this = (*this)*(l/norm()); return *this; }
+};
+
+///////////////////////////////////////////////////////////////////////////////////////////////
+//operators
+//////////////////////////////////////////////////////////////////////////////////////////////
+
+template<size_t DIM, typename T> 
+T operator*(const vec<DIM,T>& f, const vec<DIM,T>& s) {
+    T res = T();
+    for (size_t i = 0; i < DIM; i++) {
+        res += f[i]*s[i];
     }
-    Vec3<T> operator- (const Vec3<T>& other) const {
-        return Vec3<T>(x - other.x, y - other.y, z - other.z);
-    }
-    Vec3<T> operator+ (const Vec3<T>& other) const {
-        return  Vec3<T>(x + other.x, y + other.y, z + other.z);
-    }
-    bool operator== (const Vec3<T>& other) const {
-        if ( this->x == other.x && this->y == other.y &&  this->z == other.z) {
-            return true;
-        }   
-        return false;
-    }
-    Vec3<T> operator* (float f) const { 
-        return Vec3<T>(x*f, y*f, z*f);
-    }
-    T operator* (const Vec3<T>& other) const {
-        return (other.x*x + other.y*y + other.z*z);
-    }
-    float norm () const {
-        return sqrt(x*x + y*y + z*z);
-    }
-    Vec3<T> normalize(T l = 1) {
-        *this = (*this)* (1/norm());
-        return (*this);
-    }
-    Vec3<T> cross_product(Vec3<T> a, Vec3<T> b) {
-    return Vec3<T>(
-        a.y*b.z - a.z*b.y,
-        a.z*b.x - a.x*b.z,
-        a.x*b.y - a.y*b.x
-    );
+    return res;
 }
+
+template<size_t DIM, typename T> 
+vec<DIM, T> operator+ (const vec<DIM,T>& f, const vec<DIM,T>& s) {
+    vec<DIM, T> res;
+    for (size_t i = 0; i < DIM; i++) {
+        res[i] = f[i] + s[i];
+    }
+    return res;
+}
+
+template<size_t DIM, typename T> 
+vec<DIM, T> operator- (const vec<DIM,T>& f, const vec<DIM,T>& s) {
+    vec<DIM, T> res;
+    for (size_t i = 0; i < DIM; i++) {
+        res[i] = f[i] - s[i];
+    }
+    return res;
+}
+
+template<size_t DIM, typename T>
+vec<DIM, T> operator* (const vec<DIM, T>& f, const T c) {
+    vec<DIM, T> res;
+    for (size_t i = 0; i < DIM; i++) {
+        res[i] = f[i] * c;
+    }
+    return res;
+}
+
+template<size_t DIM, typename T>
+vec<DIM, T> operator/ (const vec<DIM, T>& f, const T c) {
+    vec<DIM, T> res;
+    for (size_t i = 0; i < DIM; i++) {
+        res[i] = f[i]/c;
+    }
+    return res;
+}
+
+template<size_t LEN,size_t DIM, typename T>
+vec<LEN, T> proj(const vec<DIM, T>& v, T c = 1) {
+    vec<LEN, T> res;
+    for (size_t i = 0; i < LEN; i++) {
+        res[i] = v[i]/c;
+    }
+    return res;
+}
+
+template<size_t LEN,size_t DIM, typename T>
+vec<LEN, T> expan(const vec<DIM, T> &v, T cnst = 1) {
+    vec<LEN, T> res;
+    for (size_t i = 0; i < DIM; i++) {
+        res[i] = v[i];
+    }
+    for (size_t i = DIM; i < LEN; i++) {
+        res[i] = cnst;
+    }
+    return res;
+}
+
+template <typename T> 
+vec<3,T> cross(vec<3,T> v1, vec<3,T> v2) {
+    return vec<3,T>(v1.y*v2.z - v1.z*v2.y, v1.z*v2.x - v1.x*v2.z, v1.x*v2.y - v1.y*v2.x);
+}
+
+typedef vec<2,float> Vec2f;
+typedef vec<2,int> Vec2i;
+typedef vec<3,float> Vec3f;
+typedef vec<3,int> Vec3i;
+typedef vec<4,float> Vec4f;
+typedef vec<4,int> Vec4i;
+
+const int DEFAULT_ALLOC=4;
+
+class Matrix {
+    std::vector<std::vector<float>> m;
+    int rows;
+    int cols;
+public:
+    Matrix(int r = DEFAULT_ALLOC, int c = DEFAULT_ALLOC);
+    Matrix(const Matrix& other);
+    Matrix operator= (const Matrix& other);
+
+    std::vector<float>& operator[](const int indx);
+    Matrix operator*(const Matrix& other);
+    Matrix operator*(const float c);
+    Matrix operator+(const Matrix& other);
+    Matrix operator-(const Matrix& other);
+
+    Matrix transpose();
+    Matrix inverse();
+    float determinant();
+    static Matrix identity(int size);
 };
 
-template<typename T>
-class Vec2{
-public:
-    T x,y;
-public:
-    Vec2<T>() = default;
-    Vec2<T>(T x, T y):x(x), y(y) {}
-    Vec2<T>(const Vec2<T>& other): x(other.x), y(other.y) {}
-    Vec2<T>(Vec2<T>&& other): x(other.x), y(other.y) {}
-    Vec2<T>& operator= (const Vec2<T>& other) {
-        if (this != other) {
-            x = other.x;
-            y = other.x;
+template<size_t DIM, typename T> 
+vec<DIM, T> operator*(Matrix m, vec<DIM, T> v) {
+    vec<DIM, T> res;
+    for(size_t i = 0; i < DIM; i++) {
+        T tmp = 0;
+        for (size_t j = 0; j < DIM; j++) {
+            tmp += v[j]*m[i][j];
         }
-        return *this;
+        res[i] = tmp;
     }
-    
-    Vec2<T> operator+ (const Vec2<T>& other) const {return Vec2<T>(other.x +x , other.y + y);}
-    Vec2<T> operator- (const Vec2<T>& other) const {return Vec2<T>( -other.x + x , - other.y + y);}
-    T operator* (const Vec2<T>& other) const {return x*other.x + y.other*y;}
-    float norm () const {return sqrt(x*x + y*y);}
-    Vec2<T> normilize(T l = 1) {
-        *this = (*this)*(l/norm());
-        return *this;
-    }
-
-};
-
-template<typename T> 
-class Matrix2{
-    T* data[2][2];
-public:
-    Matrix2<T>() = default;
-    Matrix2<T>(const Vec2<T>& p0, const Vec2<T>& p1) {
-        data[0][0] = new T(p0.x); 
-        data[0][1] = new T(p0.y);
-        data[1][0] = new T(p1.x);
-        data[1][1] = new T(p1.y);
-    }
-    
-};
-
-typedef Vec3<float> Vec3f;
-typedef Vec3<int> Vec3i;
-
-typedef Vec2<float> Vec2f;
-typedef Vec2<int> Vec2i;
+    return res;
+}
 #endif
